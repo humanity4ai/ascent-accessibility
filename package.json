@@ -1,0 +1,11 @@
+{
+  "name": "ascent-accessibility-engine",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Open-source machine scan engine and AI scan engine for WCAG accessibility assessment, by Ascent Partners Foundation.",
+  "type": "module",
+  "license": "MIT",
+  "dependencies": {
+    "playwright": "^1.48.0"
+  }
+}
