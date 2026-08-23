@@ -1,0 +1,16 @@
+name: Feature request
+description: Suggest an improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Proposal
+      description: What should the engine do, and why?
+    validations:
+      required: true
+  - type: textarea
+    id: sc
+    attributes:
+      label: WCAG coverage
+      description: Which success criterion or evidence gap does this address?

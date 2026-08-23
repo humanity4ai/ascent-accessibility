@@ -1,0 +1,20 @@
+name: Bug report
+description: Report a bug in the engine
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Describe the unexpected behaviour and the input.
+    validations:
+      required: true
+  - type: input
+    id: sc
+    attributes:
+      label: WCAG criterion
+      description: The success criterion affected (e.g. 1.4.3), if known.
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
