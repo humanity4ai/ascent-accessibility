@@ -18,7 +18,7 @@ by the Ascent Partners Foundation.
 
 This is a source release extracted from the full product. Module paths use the `@/` alias
 (mapping to `src/`) — see `tsconfig.json`. A few engine types reference the product's
-`src/db/schema.ts` (SurrealDB record shapes); those are included for completeness.
+`src/db/schema.ts` (PostgreSQL record shapes); those are included for completeness.
 
 ## License
 
