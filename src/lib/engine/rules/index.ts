@@ -6,6 +6,8 @@ import { robustRules } from "./robust";
 import { renderingRules } from "./rendering";
 import { interactionRules } from "./interaction";
 import { additionalRules } from "./additional";
+import { gapFillRules } from "./gap-fill";
+import { wcag22Rules } from "./wcag22";
 
 export const ALL_RULES: Rule[] = [
   ...perceivableRules,
@@ -15,6 +17,8 @@ export const ALL_RULES: Rule[] = [
   ...renderingRules,
   ...interactionRules,
   ...additionalRules,
+  ...gapFillRules,
+  ...wcag22Rules,
 ];
 
 export function selectRules(tags: readonly string[]): Rule[] {

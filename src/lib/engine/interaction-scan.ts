@@ -1,5 +1,5 @@
 import type { Page } from "playwright";
-import type { ScanViolation } from "@/lib/scanner";
+import type { ScanViolation, RuleSummary } from "@/lib/scanner";
 
 const REFLOW_WIDTH = 320;
 
@@ -20,8 +20,14 @@ function makeViolation(
   };
 }
 
-export async function runInteractionScan(page: Page): Promise<ScanViolation[]> {
+export interface InteractionScanResult {
+  violations: ScanViolation[];
+  passes: RuleSummary[];
+}
+
+export async function runInteractionScan(page: Page): Promise<InteractionScanResult> {
   const violations: ScanViolation[] = [];
+  const passes: RuleSummary[] = [];
   const viewport = page.viewportSize();
 
   try {
@@ -34,6 +40,8 @@ export async function runInteractionScan(page: Page): Promise<ScanViolation[]> {
       violations.push(
         makeViolation("reflow", "content overflows horizontally at a 320px viewport", ["wcag2aa", "wcag1410"]),
       );
+    } else {
+      passes.push({ id: "reflow", tags: ["wcag2aa", "wcag1410"] });
     }
   } catch {
     /* reflow check unavailable */
@@ -72,11 +80,15 @@ export async function runInteractionScan(page: Page): Promise<ScanViolation[]> {
         violations.push(
           makeViolation("no-keyboard-trap", "keyboard focus appears trapped", ["wcag2a", "wcag212"]),
         );
+      } else {
+        passes.push({ id: "no-keyboard-trap", tags: ["wcag2a", "wcag212"] });
       }
+    } else {
+      passes.push({ id: "no-keyboard-trap", tags: ["wcag2a", "wcag212"] });
     }
   } catch {
     /* keyboard check unavailable */
   }
 
-  return violations;
+  return { violations, passes };
 }

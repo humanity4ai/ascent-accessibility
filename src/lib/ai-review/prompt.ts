@@ -14,26 +14,33 @@ function reasoningLanguageLine(locale?: string): string {
 // Stable policy + output contract — the SYSTEM message. Separating this from the
 // per-assessment task keeps the output contract constant across calls, which
 // meaningfully reduces fence/append/truncation drift.
-export function buildTriageSystemPrompt(locale?: string): string {
+export function buildTriageSystemPrompt(locale?: string, pageLanguages?: string[]): string {
   const lang = reasoningLanguageLine(locale);
+  const pageLangLine =
+    pageLanguages && pageLanguages.length > 0
+      ? `- The page content is written in: ${pageLanguages.join(", ")}.`
+      : "";
   return [
-    "You are an accessibility conformance auditor. You review a screenshot of a rendered web page and classify a set of WCAG success criteria.",
+    "You are an accessibility conformance auditor. You review a rendered web page and classify a set of WCAG success criteria.",
+    "",
+    "Tools: you may be provided browser tools (accessibility tree, element inspection, contrast, links, headings, images/alt, reading order, and focus/hover/error-state triggers, plus click/submit for interaction states). If tools are available, call them to gather evidence about the live page — do not guess.",
+    "",
+    pageLangLine,
     "",
     "Rules:",
-    "- Judge ONLY what is visible in the screenshot. Do not infer DOM, keyboard, screen-reader, or dynamic behaviour from pixels alone.",
-    '- If the screenshot cannot establish a criterion\'s outcome, return "needs-review" — never guess; a wrong PASS is worse than an unresolved item.',
-    "- A criterion that cannot be tested from a static screenshot (alt text, DOM semantics, keyboard operation, focus order, live regions) must be needs-review unless the violation is directly visible.",
+    "- Base each decision on the screenshot AND the tool results together.",
+    "- Prefer a tool over a guess when a tool can settle the criterion (e.g. trigger_focus/inspect_element for focus appearance, get_a11y_tree for landmarks/roles, check_contrast for contrast, get_links/get_headings/get_reading_order for structure, trigger_input_and_errors/submit_form for error states, click for interaction).",
+    "- You MUST return a definitive verdict for every criterion. If the evidence is inconclusive, choose the more likely outcome and set confidence below 0.5 — never refuse to judge.",
     lang,
     "",
     "Verdicts:",
-    '- "pass": visible evidence supports the criterion.',
-    '- "fail": visible evidence clearly contradicts the criterion.',
-    '- "needs-review": the criterion cannot be determined from this image.',
+    '- "pass": evidence supports the criterion.',
+    '- "fail": evidence contradicts the criterion.',
     "",
     "Output contract:",
-    'Return ONLY one JSON object: {"verdicts":[{"sc":"1.1.1","verdict":"pass"|"fail"|"needs-review","confidence":0.0,"reasoning":"..."}]}',
+    'Return ONLY one JSON object: {"verdicts":[{"sc":"1.1.1","verdict":"pass"|"fail","confidence":0.0,"reasoning":"..."}]}',
     "One object per criterion, in the given order, with exactly these keys and no others.",
-    "confidence is a number 0.0–1.0; use 0.8 or above only when the evidence is clear. reasoning is one concise sentence citing visible evidence.",
+    "confidence is a number 0.0–1.0; use 0.8 or above only when the evidence is clear. reasoning is one concise sentence citing the evidence.",
     "No Markdown fences, no extra keys, no trailing text.",
   ]
     .filter((line) => line !== "")
@@ -60,7 +67,7 @@ export function buildScPrompt(config: ScAiConfig, locale?: string): string {
     for (const p of config.passRequires) lines.push(`- PASS only if: ${p}`);
     for (const f of config.failRequires) lines.push(`- FAIL only if: ${f}`);
   }
-  lines.push("- Otherwise return needs-review — do not guess.");
+  lines.push("- If inconclusive, choose the more likely outcome with confidence ≤ 0.5 — never refuse to judge.");
 
   if (config.examples?.fail) {
     lines.push("");

@@ -68,6 +68,10 @@ export function buildEngineSource(rules: Rule[]): string {
     .join(",");
 
   return `(function () {
+// esbuild's keepNames transform (enabled under tsx) wraps nested functions with
+// __name(fn, "name"). Define the helper here so .toString()-inlined rules eval
+// cleanly in the page regardless of the transpiler that built the host bundle.
+var __name = function (target, value) { return Object.defineProperty(target, "name", { value: value, configurable: true }); };
 ${FEATURES_SOURCE}
 var __apfSlice = function (s) { try { return s.slice(0, 500); } catch (e) { return ""; } };
 var RULES = [${inlined}];
@@ -75,7 +79,8 @@ window.__apfEngine = {
   run: function (tags) {
     var tagSet = {};
     for (var i = 0; i < tags.length; i++) tagSet[tags[i]] = true;
-    var violations = [], passes = [], incomplete = [];
+    var violations = [], passes = [], incomplete = [], inapplicable = [], errors = [];
+    var MAX_NODES = 100, MAX_BUCKET = 1000;
     for (var j = 0; j < RULES.length; j++) {
       var r = RULES[j];
       var matched = false;
@@ -84,16 +89,16 @@ window.__apfEngine = {
       var nodes;
       try {
         nodes = r.matcher ? Array.prototype.slice.call(document.querySelectorAll(r.matcher)) : [document.documentElement];
-      } catch (e) { continue; }
-      if (nodes.length === 0) continue;
+      } catch (e) { errors.push({ ruleId: r.id, phase: "extract", message: (e && e.message) || String(e) }); continue; }
+      if (nodes.length === 0) { inapplicable.push({ id: r.id, tags: r.tags, wcagSc: r.wcagSc || [] }); continue; }
       var fails = [], incs = [];
       for (var m = 0; m < nodes.length; m++) {
         var facts;
-        try { facts = r.extract(nodes[m]); } catch (e) { facts = {}; }
+        try { facts = r.extract(nodes[m]); } catch (e) { errors.push({ ruleId: r.id, phase: "extract", message: (e && e.message) || String(e) }); facts = {}; }
         var allPass = true, anyIncomplete = false, failSummary = "";
         for (var c = 0; c < r.checks.length; c++) {
           var out;
-          try { out = r.checks[c].evaluate(facts); } catch (e) { out = { result: "incomplete", failureSummary: "check errored" }; }
+          try { out = r.checks[c].evaluate(facts); } catch (e) { errors.push({ ruleId: r.id, phase: "check", message: (e && e.message) || String(e) }); out = { result: "incomplete", failureSummary: "check errored" }; }
           if (out.result === "fail") { allPass = false; failSummary = out.failureSummary || failSummary; break; }
           if (out.result === "incomplete") anyIncomplete = true;
         }
@@ -101,11 +106,11 @@ window.__apfEngine = {
         if (!allPass) fails.push(nodeData);
         else if (anyIncomplete) incs.push(nodeData);
       }
-      if (fails.length > 0) violations.push({ id: r.id, impact: r.impact, description: r.description, help: r.help, tags: r.tags, wcagSc: r.wcagSc, nodes: fails });
-      else if (incs.length > 0) incomplete.push({ id: r.id, tags: r.tags, nodes: incs });
-      else passes.push({ id: r.id, tags: r.tags });
+      if (fails.length > 0) violations.push({ id: r.id, impact: r.impact, description: r.description, help: r.help, tags: r.tags, wcagSc: r.wcagSc || [], nodes: fails.slice(0, MAX_NODES) });
+      else if (incs.length > 0) incomplete.push({ id: r.id, tags: r.tags, wcagSc: r.wcagSc || [], nodes: incs.slice(0, MAX_NODES) });
+      else passes.push({ id: r.id, tags: r.tags, wcagSc: r.wcagSc || [] });
     }
-    return { violations: violations, passes: passes, incomplete: incomplete, features: __apfFeatures(document), mediaUrls: __apfMediaUrls(document) };
+    return { violations: violations.slice(0, MAX_BUCKET), passes: passes.slice(0, MAX_BUCKET), incomplete: incomplete.slice(0, MAX_BUCKET), inapplicable: inapplicable.slice(0, MAX_BUCKET), features: __apfFeatures(document), mediaUrls: __apfMediaUrls(document), errors: errors };
   }
 };
 })();`;

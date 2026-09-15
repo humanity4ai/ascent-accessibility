@@ -5,6 +5,13 @@ export interface Rgb {
   a: number;
 }
 
+// WCAG 2.x contrast + large-text thresholds (spec constants).
+export const CONTRAST_RATIO_NORMAL = 4.5;
+export const CONTRAST_RATIO_LARGE = 3;
+export const LARGE_TEXT_FONT_SIZE_PX = 24;
+export const LARGE_TEXT_BOLD_FONT_SIZE_PX = 18.66;
+export const BOLD_FONT_WEIGHT = 700;
+
 export function parseRgbColor(color: string): Rgb | null {
   const m =
     /rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)/i.exec(
@@ -35,9 +42,12 @@ export function contrastRatio(fg: Rgb, bg: Rgb): number {
 }
 
 export function isLargeText(fontSizePx: number, fontWeight: number): boolean {
-  return fontSizePx >= 24 || (fontSizePx >= 18.66 && fontWeight >= 700);
+  return (
+    fontSizePx >= LARGE_TEXT_FONT_SIZE_PX ||
+    (fontSizePx >= LARGE_TEXT_BOLD_FONT_SIZE_PX && fontWeight >= BOLD_FONT_WEIGHT)
+  );
 }
 
 export function contrastThreshold(isLarge: boolean): number {
-  return isLarge ? 3 : 4.5;
+  return isLarge ? CONTRAST_RATIO_LARGE : CONTRAST_RATIO_NORMAL;
 }

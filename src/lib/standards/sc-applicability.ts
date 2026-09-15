@@ -64,9 +64,9 @@ export function mergeFeatures(a: PageFeatures, b: PageFeatures): PageFeatures {
 
 export type Applicability = "applicable" | "not-applicable";
 
-// Determines whether a success criterion is relevant to the page's content.
-// Returns "not-applicable" when the page has no content of the kind the SC
-// concerns (so the SC is satisfied by absence); "applicable" otherwise.
+// Feature-flag fallback for SCs WITHOUT a machine rule (AI/manual) and for
+// machine SCs routed here explicitly (see FEATURE_ROUTED_SCS). Machine SCs with
+// matchers are decided by isScApplicable in sc-coverage before this is reached.
 export function checkScApplicability(scNum: string, f: PageFeatures): Applicability {
   switch (scNum) {
     case "1.1.1":
@@ -85,13 +85,10 @@ export function checkScApplicability(scNum: string, f: PageFeatures): Applicabil
       return "not-applicable";
     case "1.3.5":
       return f.hasForms ? "applicable" : "not-applicable";
-    case "1.4.2":
-      return f.hasAudio ? "applicable" : "not-applicable";
     case "1.4.5":
     case "1.4.9":
       return f.hasImages ? "applicable" : "not-applicable";
     case "2.1.1":
-    case "2.1.2":
     case "2.4.3":
     case "2.4.7":
     case "2.5.3":
@@ -100,10 +97,6 @@ export function checkScApplicability(scNum: string, f: PageFeatures): Applicabil
       return f.hasAccesskey ? "applicable" : "not-applicable";
     case "2.2.1":
       return f.hasTimeLimit ? "applicable" : "not-applicable";
-    case "2.2.2":
-      return f.hasMarquee || f.hasAnimatedContent || f.hasAutoplay ? "applicable" : "not-applicable";
-    case "2.3.1":
-      return "not-applicable";
     case "2.4.6":
       return f.hasHeadings ? "applicable" : "not-applicable";
     case "2.5.1":

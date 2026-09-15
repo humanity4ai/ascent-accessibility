@@ -1,50 +1,53 @@
 import { getSc, type WcagLevel, type WcagSc } from "@/lib/standards/wcag-sc";
-import { checkScApplicability, type PageFeatures } from "@/lib/standards/sc-applicability";
+import type { PageFeatures } from "@/lib/standards/sc-applicability";
+import { isScApplicable } from "@/lib/standards/sc-coverage";
 
 export type Impact = "critical" | "serious" | "moderate" | "minor";
 
-// The conformance opinion: only issued when no applicable SC is "Cannot tell".
+// The conformance opinion: only issued when every applicable SC is resolved.
 export type ConformanceOutcome = "conforms" | "does-not-conform" | "undetermined";
 
 // Stage 4 — the machine verdict (deterministic rules + applicability).
 export type MachineVerdict = "Passed" | "Failed" | "Unresolved" | "NotPresent";
 
-// Stage 6 — the final verdict (machine + AI, folded per SC), in the W3C/WAI
-// conformance-evaluation vocabulary.
-export type FinalVerdict = "Passed" | "Failed" | "CannotTell" | "NotPresent" | "NotChecked";
+// Stage 6 — the final verdict (machine + AI, folded per SC). "NotTested" is the
+// honest disposition when neither the machine nor the agentic AI resolved the SC
+// (e.g. no AI key configured) — never an ambiguous "cannot tell".
+export type FinalVerdict = "Passed" | "Failed" | "NotPresent" | "NotTested";
+
+// Provenance confidence for a resolved verdict.
+export type VerdictConfidence = "confirmed" | "single-source";
 
 export const FINAL_VERDICT_LABELS: Record<FinalVerdict, string> = {
   Passed: "Passed",
   Failed: "Failed",
-  CannotTell: "Cannot tell",
   NotPresent: "Not present",
-  NotChecked: "Not checked",
+  NotTested: "Not tested",
 };
 
-// Legacy (pre-rename) verdicts normalized to the official vocabulary on read.
+// Legacy (pre-rename) verdicts normalized to the current vocabulary on read.
 export function normalizeFinalVerdict(value: string): FinalVerdict {
   switch (value) {
     case "Passed":
       return "Passed";
     case "Failed":
       return "Failed";
-    case "CannotTell":
-      return "CannotTell";
     case "NotPresent":
       return "NotPresent";
-    case "NotChecked":
-      return "NotChecked";
+    case "NotTested":
+      return "NotTested";
     case "compliant":
       return "Passed";
     case "violate":
       return "Failed";
-    case "need-human-checking":
-    case "needs-review":
-      return "CannotTell";
     case "not-applicable":
       return "NotPresent";
+    // Legacy "cannot tell"-family values collapse to the honest "not tested".
+    case "CannotTell":
+    case "need-human-checking":
+    case "needs-review":
     default:
-      return "CannotTell";
+      return "NotTested";
   }
 }
 
@@ -94,6 +97,9 @@ export interface ScConformanceRow {
   level: WcagLevel;
   result: FinalVerdict;
   machineResult: MachineVerdict;
+  // Provenance: machine-decided rows are "confirmed" (deterministic); AI-resolved
+  // rows are "single-source" (one model's judgment, not independently confirmed).
+  confidence?: VerdictConfidence | undefined;
 }
 
 export interface ConformanceResult {
@@ -101,7 +107,7 @@ export interface ConformanceResult {
   passed: number;
   failed: number;
   notPresent: number;
-  cannotTell: number;
+  notTested: number;
   coverage: number;
   levelAttained: "A" | "AA" | "AAA" | "none";
   // Conformance opinion + counts (replaces the severity-weighted 0–100 score).
@@ -118,6 +124,7 @@ export function computeConformance(
   scs: readonly WcagSc[],
   findings: readonly { wcagSc: string[] }[],
   passedScs: ReadonlySet<string>,
+  matchedScs: ReadonlySet<string>,
   features: PageFeatures,
 ): MachineConformanceResult {
   const failed = new Set<string>();
@@ -131,7 +138,7 @@ export function computeConformance(
     let result: MachineVerdict;
     if (failed.has(sc.num)) result = "Failed";
     else if (passedScs.has(sc.num)) result = "Passed";
-    else if (checkScApplicability(sc.num, features) === "not-applicable") {
+    else if (isScApplicable(sc.num, matchedScs, features) === "not-applicable") {
       result = "NotPresent";
     } else {
       result = "Unresolved";
@@ -156,18 +163,33 @@ export function finalizeConformance(
 ): ConformanceResult {
   const rows: ScConformanceRow[] = machine.rows.map((row) => {
     let result: FinalVerdict;
+    let confidence: VerdictConfidence | undefined;
     if (row.result === "Unresolved") {
-      result = resolved.get(row.num) ?? "CannotTell";
+      const resolvedVerdict = resolved.get(row.num);
+      if (resolvedVerdict) {
+        result = resolvedVerdict;
+        confidence = "single-source";
+      } else {
+        result = "NotTested";
+      }
     } else {
       result = row.result;
+      confidence = "confirmed";
     }
-    return { num: row.num, title: row.title, level: row.level, result, machineResult: row.result };
+    return {
+      num: row.num,
+      title: row.title,
+      level: row.level,
+      result,
+      machineResult: row.result,
+      ...(confidence ? { confidence } : {}),
+    };
   });
 
   const passed = rows.filter((r) => r.result === "Passed").length;
   const failed = rows.filter((r) => r.result === "Failed").length;
   const notPresent = rows.filter((r) => r.result === "NotPresent").length;
-  const cannotTell = rows.filter((r) => r.result === "CannotTell").length;
+  const notTested = rows.filter((r) => r.result === "NotTested").length;
   const tested = passed + failed;
   const coverage = rows.length === 0 ? 0 : Math.round((tested / rows.length) * 100);
 
@@ -177,14 +199,14 @@ export function finalizeConformance(
     if (LEVEL_RANK[level] > maxRank) break;
     const relevant = rows.filter((r) => LEVEL_RANK[r.level] <= LEVEL_RANK[level]);
     const hasFailed = relevant.some((r) => r.result === "Failed");
-    const hasReview = relevant.some((r) => r.result === "CannotTell");
-    if (!hasFailed && !hasReview) levelAttained = level;
+    const hasUntested = relevant.some((r) => r.result === "NotTested");
+    if (!hasFailed && !hasUntested) levelAttained = level;
   }
 
-  const scsApplicable = passed + failed + cannotTell;
+  const scsApplicable = passed + failed + notTested;
   const scsMet = passed;
   const outcome: ConformanceOutcome =
-    cannotTell > 0
+    notTested > 0
       ? "undetermined"
       : scsApplicable === 0
         ? "undetermined"
@@ -197,7 +219,7 @@ export function finalizeConformance(
     passed,
     failed,
     notPresent,
-    cannotTell,
+    notTested,
     coverage,
     levelAttained,
     outcome,

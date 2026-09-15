@@ -22,6 +22,7 @@ export interface ScanViolation {
 export interface RuleSummary {
   id: string;
   tags: string[];
+  wcagSc?: string[];
   nodes?: ScanNode[];
 }
 
@@ -30,8 +31,18 @@ export interface ScanResult {
   violations: ScanViolation[];
   passes: RuleSummary[];
   incomplete: RuleSummary[];
+  inapplicable: RuleSummary[];
   features: PageFeatures;
   mediaUrls: string[];
+  errors?: ScanError[];
+}
+
+// A rule whose extract/check threw in-page. Surfaced (not silently swallowed) so
+// an engine bug is visible and countable instead of reporting "pass"/"incomplete".
+export interface ScanError {
+  ruleId: string;
+  phase: "extract" | "check";
+  message: string;
 }
 
 export class ScanFailedError extends Error {
@@ -61,6 +72,7 @@ export interface RawViolation {
 export interface RawRule {
   id: string;
   tags?: string[];
+  wcagSc?: string[];
   nodes?: RawNode[];
 }
 
@@ -68,7 +80,15 @@ export interface RawScanResult {
   violations: RawViolation[];
   passes?: RawRule[];
   incomplete?: RawRule[];
+  inapplicable?: RawRule[];
   mediaUrls?: string[];
+  errors?: RawScanError[];
+}
+
+export interface RawScanError {
+  ruleId: string;
+  phase: string;
+  message: string;
 }
 
 export interface ScreenshotOptions {
@@ -113,7 +133,7 @@ function mapNode(node: RawNode): ScanNode {
 }
 
 export function mapRuleSummary(rule: RawRule): RuleSummary {
-  return { id: rule.id, tags: rule.tags ?? [], nodes: (rule.nodes ?? []).map(mapNode) };
+  return { id: rule.id, tags: rule.tags ?? [], wcagSc: rule.wcagSc ?? [], nodes: (rule.nodes ?? []).map(mapNode) };
 }
 
 export function mapViolations(raw: RawScanResult): ScanViolation[] {
@@ -124,7 +144,7 @@ export function mapViolations(raw: RawScanResult): ScanViolation[] {
     help: violation.help ?? "",
     helpUrl: violation.helpUrl ?? "",
     tags: violation.tags ?? [],
-    wcagSc: violation.wcagSc,
+    wcagSc: violation.wcagSc ?? [],
     nodes: (violation.nodes ?? []).map(mapNode),
     nodeCount: violation.nodes?.length ?? 0,
   }));

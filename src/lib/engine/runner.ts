@@ -40,7 +40,13 @@ export async function runEngine(
     violations: mapViolations(result),
     passes: (result.passes ?? []).map(mapRuleSummary),
     incomplete: (result.incomplete ?? []).map(mapRuleSummary),
+    inapplicable: (result.inapplicable ?? []).map(mapRuleSummary),
     features: result.features,
     mediaUrls: result.mediaUrls ?? [],
+    errors: (result.errors ?? []).map((e) => ({
+      ruleId: e.ruleId,
+      phase: e.phase === "check" ? "check" : "extract",
+      message: e.message,
+    })),
   };
 }

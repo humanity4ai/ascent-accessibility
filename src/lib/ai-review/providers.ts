@@ -18,7 +18,7 @@ export interface AiProvider {
 }
 
 export const DEFAULT_PROVIDER = "openrouter";
-export const DEFAULT_VISION_MODEL = "qwen/qwen2.5-vl-72b-instruct";
+export const DEFAULT_VISION_MODEL = "qwen/qwen3-vl-235b-a22b-instruct";
 export const DEFAULT_AUDIO_MODEL = "google/gemini-2.5-flash";
 
 // Curated provider catalog. `custom` is an OpenAI-compatible endpoint where the
@@ -32,11 +32,12 @@ export const AI_PROVIDERS: AiProvider[] = [
     auth: "bearer",
     validateEndpoint: "/key",
     visionModels: [
-      { id: "qwen/qwen2.5-vl-72b-instruct", label: "Qwen 2.5 VL 72B (default)" },
+      { id: "qwen/qwen3-vl-235b-a22b-instruct", label: "Qwen3-VL 235B (tools)" },
       { id: "openai/gpt-4o", label: "GPT-4o" },
       { id: "openai/gpt-4o-mini", label: "GPT-4o mini" },
-      { id: "anthropic/claude-3.5-sonnet", label: "Claude 3.5 Sonnet" },
-      { id: "google/gemini-2.0-flash-001", label: "Gemini 2.0 Flash" },
+      { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+      { id: "anthropic/claude-sonnet-4.5", label: "Claude Sonnet 4.5" },
+      { id: "qwen/qwen2.5-vl-72b-instruct", label: "Qwen 2.5 VL 72B (legacy, no tools)" },
     ],
     audioModels: [{ id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash (audio)" }],
   },
@@ -61,8 +62,10 @@ export const AI_PROVIDERS: AiProvider[] = [
     auth: "bearer",
     validateEndpoint: "/models",
     visionModels: [
-      { id: "qwen-vl-plus", label: "Qwen-VL Plus" },
-      { id: "qwen-vl-max", label: "Qwen-VL Max" },
+      { id: "qwen3-vl-plus", label: "Qwen3-VL Plus (tools)" },
+      { id: "qwen3-vl-flash", label: "Qwen3-VL Flash (tools)" },
+      { id: "qwen-vl-plus", label: "Qwen-VL Plus (legacy, no tools)" },
+      { id: "qwen-vl-max", label: "Qwen-VL Max (legacy, no tools)" },
     ],
     audioModels: [],
   },
@@ -100,6 +103,16 @@ export const AI_PROVIDERS: AiProvider[] = [
     auth: "bearer",
     validateEndpoint: "/models",
     visionModels: [],
+    audioModels: [],
+  },
+  {
+    id: "deepseek",
+    label: "DeepSeek",
+    apiFormat: "openai",
+    baseUrl: "https://api.deepseek.com/v1",
+    auth: "bearer",
+    validateEndpoint: "/models",
+    visionModels: [{ id: "deepseek-chat", label: "DeepSeek Chat" }],
     audioModels: [],
   },
 ];
