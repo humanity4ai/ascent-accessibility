@@ -105,6 +105,10 @@ export interface ScannerPage {
       waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";
     },
   ): Promise<{ status(): number } | null>;
+  waitForLoadState(
+    state?: "load" | "domcontentloaded" | "networkidle",
+    options?: { timeout?: number },
+  ): Promise<void>;
   addInitScript(options: { path: string } | { content: string }): Promise<void>;
   evaluate(pageFn: (arg: string[]) => unknown, arg: string[]): Promise<unknown>;
   content(): Promise<string>;

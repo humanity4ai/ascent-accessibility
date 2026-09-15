@@ -25,7 +25,15 @@ export async function runEngine(
     throw new ScanFailedError(`Could not load ${url}: HTTP ${status}`);
   }
 
-  await new Promise((resolve) => setTimeout(resolve, Number(process.env.SCAN_SETTLE_MS ?? 300)));
+  // Wait for the `load` event (bounded) so client-rendered content settles, then a
+  // short settle for post-load microtasks. `networkidle` is deliberately avoided —
+  // it is unreliable on streaming/polling/analytics pages. Never wait indefinitely.
+  const loadTimeoutMs = Number(process.env.SCAN_LOAD_TIMEOUT_MS ?? 3000);
+  await page.waitForLoadState("load", { timeout: loadTimeoutMs }).catch(() => {
+    /* load never fired within the budget — proceed with the DOM we have */
+  });
+  const settleMs = Number(process.env.SCAN_SETTLE_MS ?? 500);
+  await new Promise((resolve) => setTimeout(resolve, settleMs));
 
   const result = (await page.evaluate((runTags) => {
     const engine = (
