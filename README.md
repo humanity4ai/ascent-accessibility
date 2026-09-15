@@ -20,6 +20,13 @@ This is a source release extracted from the full product. Module paths use the `
 (mapping to `src/`) — see `tsconfig.json`. A few engine types reference the product's
 `src/db/schema.ts` (PostgreSQL record shapes); those are included for completeness.
 
+## Source & sync
+
+This repo is the MIT-licensed engine source release. It is synced automatically from the
+private product repository by a GitHub Actions workflow: only `src/lib/{engine, ai-review,
+standards, scanner, scoring}` are mirrored — application, account, and training (exam/answer)
+code are never copied. Contributions should target the upstream product repository.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
