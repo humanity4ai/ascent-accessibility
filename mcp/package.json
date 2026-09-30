@@ -1,0 +1,50 @@
+{
+  "name": "ascent-accessibility-mcp",
+  "version": "0.1.0",
+  "description": "MCP server exposing the WCAG 2.2 success-criteria knowledge base (catalog, remediation, manual tests, reviewer profiles, understanding, applicability) used by Ascent Accessibility.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "ascent-accessibility-mcp": "dist/server.js"
+  },
+  "files": [
+    "dist",
+    "SKILL.md",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "wcag",
+    "accessibility",
+    "a11y",
+    "wcag22"
+  ],
+  "scripts": {
+    "build": "esbuild src/server.ts --bundle --platform=node --format=esm --target=node20 --packages=external --tsconfig=tsconfig.json --outfile=dist/server.js",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.31.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.11"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}
