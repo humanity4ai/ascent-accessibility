@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+dist
+**/dist
+.next
+.git
+coverage
+playwright-report
+test-results
+.playwright-mcp
+.env
+.env*
+*.tgz
+*.tar
