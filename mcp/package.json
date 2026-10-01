@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "description": "MCP server exposing the WCAG 2.2 success-criteria knowledge base (catalog, remediation, manual tests, reviewer profiles, understanding, applicability) used by Ascent Accessibility.",
   "license": "MIT",
+  "homepage": "https://accessibility.ascent.partners",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/humanity4ai/ascent-accessibility.git",
+    "directory": "mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/humanity4ai/ascent-accessibility/issues"
+  },
   "type": "module",
   "bin": {
     "ascent-accessibility-mcp": "dist/server.js"
@@ -10,7 +19,8 @@
   "files": [
     "dist",
     "SKILL.md",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=20"
